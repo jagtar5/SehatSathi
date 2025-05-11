@@ -6,7 +6,7 @@ import '../styles/Dashboard.css';
 
 export default function DoctorDashboard() {
   const [activeTab, setActiveTab] = useState('profile');
-  const [doctors, setDoctors] = useState([]);
+  const [currentDoctor, setCurrentDoctor] = useState(null);
   const [schedules, setSchedules] = useState([]);
   const [patients, setPatients] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -32,14 +32,16 @@ export default function DoctorDashboard() {
     const fetchData = async () => {
       setLoading(true);
       try {
-        // Fetch all data at once
-        const [doctorsResponse, schedulesResponse, patientsResponse] = await Promise.all([
-          apiClient.get('/doctors/'),
+        // Fetch current doctor's data
+        const doctorResponse = await apiClient.get('/doctors/me/');
+        setCurrentDoctor(doctorResponse.data);
+
+        // Fetch schedules and patients
+        const [schedulesResponse, patientsResponse] = await Promise.all([
           apiClient.get('/schedules/'),
           apiClient.get('/patients/')
         ]);
         
-        setDoctors(doctorsResponse.data);
         setSchedules(schedulesResponse.data);
         setPatients(patientsResponse.data);
         setLoading(false);
@@ -58,9 +60,6 @@ export default function DoctorDashboard() {
       dataFetched.current = false;
     };
   }, [user]); // Only depend on user, not activeTab
-
-  // Find current doctor data
-  const currentDoctor = doctors.find(d => d.first_name?.toLowerCase() === user?.username) || {};
 
   // Handle tab change
   const handleTabChange = (tab) => {
@@ -81,31 +80,31 @@ export default function DoctorDashboard() {
           <div className="doctor-avatar">
             <i className="fas fa-user-md"></i>
           </div>
-          <h3>Dr. {currentDoctor.first_name || user?.username} {currentDoctor.last_name || ''}</h3>
-          <p>{currentDoctor.specialization || 'Specialist'}</p>
+          <h3>Dr. {currentDoctor?.first_name || ''} {currentDoctor?.last_name || ''}</h3>
+          <p>{currentDoctor?.specialization || 'Specialist'}</p>
         </div>
         
         <nav className="dashboard-nav">
           <button 
-            className={`nav-item ${activeTab === 'profile' ? 'active' : ''}`}
+            className={nav-item ${activeTab === 'profile' ? 'active' : ''}}
             onClick={() => handleTabChange('profile')}
           >
             <i className="fas fa-user-circle"></i> Profile
           </button>
           <button 
-            className={`nav-item ${activeTab === 'schedule' ? 'active' : ''}`}
+            className={nav-item ${activeTab === 'schedule' ? 'active' : ''}}
             onClick={() => handleTabChange('schedule')}
           >
             <i className="fas fa-calendar-alt"></i> Schedule
           </button>
           <button 
-            className={`nav-item ${activeTab === 'patients' ? 'active' : ''}`}
+            className={nav-item ${activeTab === 'patients' ? 'active' : ''}}
             onClick={() => handleTabChange('patients')}
           >
             <i className="fas fa-users"></i> Patients
           </button>
           <button 
-            className={`nav-item ${activeTab === 'lab' ? 'active' : ''}`}
+            className={nav-item ${activeTab === 'lab' ? 'active' : ''}}
             onClick={() => handleTabChange('lab')}
           >
             <i className="fas fa-flask"></i> Lab Tests
@@ -121,23 +120,23 @@ export default function DoctorDashboard() {
               <div className="profile-info">
                 <div className="info-group">
                   <label>Full Name:</label>
-                  <p>Dr. {currentDoctor.first_name || ''} {currentDoctor.last_name || ''}</p>
+                  <p>Dr. {currentDoctor?.first_name || ''} {currentDoctor?.last_name || ''}</p>
                 </div>
                 <div className="info-group">
                   <label>Specialization:</label>
-                  <p>{currentDoctor.specialization || 'Not specified'}</p>
+                  <p>{currentDoctor?.specialization || 'Not specified'}</p>
                 </div>
                 <div className="info-group">
                   <label>Department:</label>
-                  <p>{currentDoctor.department || 'Not specified'}</p>
+                  <p>{currentDoctor?.department || 'Not specified'}</p>
                 </div>
                 <div className="info-group">
                   <label>Email:</label>
-                  <p>{currentDoctor.email || 'Not specified'}</p>
+                  <p>{currentDoctor?.email || 'Not specified'}</p>
                 </div>
                 <div className="info-group">
                   <label>Contact:</label>
-                  <p>{currentDoctor.contact_number || 'Not specified'}</p>
+                  <p>{currentDoctor?.contact_number || 'Not specified'}</p>
                 </div>
               </div>
               <button className="edit-profile-btn">
@@ -172,7 +171,7 @@ export default function DoctorDashboard() {
                           <td>{new Date(appointment.appointment_date).toLocaleString()}</td>
                           <td>{appointment.reason}</td>
                           <td>
-                            <span className={`status-badge status-${appointment.status.toLowerCase()}`}>
+                            <span className={status-badge status-${appointment.status.toLowerCase()}}>
                               {appointment.status}
                             </span>
                           </td>
@@ -253,4 +252,4 @@ export default function DoctorDashboard() {
       </div>
     </div>
   );
-} 
+}
