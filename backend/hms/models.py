@@ -122,3 +122,24 @@ class LabTestOrder(models.Model):
 
     def __str__(self):
         return f"{self.test_name} for {self.patient} ({self.status})"
+
+class Receptionist(models.Model):
+    user = models.OneToOneField(
+        User,
+        on_delete=models.CASCADE,
+        related_name='receptionist',
+        null=True,
+        blank=True,
+    )
+    receptionist_id = models.AutoField(primary_key=True)
+    first_name = models.CharField(max_length=100, verbose_name="First Name")
+    last_name = models.CharField(max_length=100, verbose_name="Last Name")
+    contact_number = models.CharField(max_length=20, blank=True, null=True, verbose_name="Contact Number")
+    email = models.EmailField(blank=True, null=True, verbose_name="Email")
+
+    def __str__(self):
+        return f"{self.first_name} {self.last_name}"
+
+    class Meta:
+        verbose_name = "Receptionist"
+        verbose_name_plural = "Receptionists"

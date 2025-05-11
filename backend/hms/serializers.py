@@ -1,5 +1,6 @@
 from rest_framework import serializers
-from .models import Appointment, Doctor, Patient
+from django.contrib.auth.models import User
+from .models import Appointment, Doctor, Patient, Receptionist
 
 class DoctorSerializer(serializers.ModelSerializer):
     class Meta:
@@ -24,3 +25,22 @@ class AppointmentSerializer(serializers.ModelSerializer):
     
     def get_patient_name(self, obj):
         return f"{obj.patient.first_name} {obj.patient.last_name}"
+
+class UserSerializer(serializers.ModelSerializer):
+    userType = serializers.SerializerMethodField()
+
+    class Meta:
+        model = User
+        fields = ('id', 'username', 'first_name', 'last_name', 'email', 'userType')
+        read_only_fields = ('id', 'userType')
+
+    def get_userType(self, obj):
+        if hasattr(obj, 'doctor'):
+            return 'Doctor'
+        elif hasattr(obj, 'patient'):
+            return 'Patient'
+        elif hasattr(obj, 'receptionist'):
+            return 'Receptionist'
+        elif obj.is_staff:
+            return 'Admin'
+        return None
