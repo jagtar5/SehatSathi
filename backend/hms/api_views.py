@@ -4,16 +4,9 @@ from rest_framework.response import Response
 from rest_framework.permissions import AllowAny
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.models import User
+from rest_framework.authtoken.models import Token
 from .models import Patient, Appointment, Doctor, Receptionist
 from .serializers import PatientSerializer, AppointmentSerializer, UserSerializer
-
-class PatientViewSet(viewsets.ModelViewSet):
-    queryset = Patient.objects.all()
-    serializer_class = PatientSerializer
-
-class AppointmentViewSet(viewsets.ModelViewSet):
-    queryset = Appointment.objects.all()
-    serializer_class = AppointmentSerializer
 
 @api_view(['POST'])
 @permission_classes([AllowAny])
@@ -32,27 +25,36 @@ def login_view(request):
         # Check user type matches
         if user_type == 'Doctor' and hasattr(user, 'doctor'):
             login(request, user)
+            # Get or create token
+            token, _ = Token.objects.get_or_create(user=user)
             return Response({
                 'fullName': f"Dr. {user.first_name} {user.last_name}",
-                'userType': 'Doctor'
+                'userType': 'Doctor',
+                'token': token.key
             })
         elif user_type == 'Patient' and hasattr(user, 'patient'):
             login(request, user)
+            token, _ = Token.objects.get_or_create(user=user)
             return Response({
                 'fullName': f"{user.first_name} {user.last_name}",
-                'userType': 'Patient'
+                'userType': 'Patient',
+                'token': token.key
             })
         elif user_type == 'Receptionist' and hasattr(user, 'receptionist'):
             login(request, user)
+            token, _ = Token.objects.get_or_create(user=user)
             return Response({
                 'fullName': f"{user.first_name} {user.last_name}",
-                'userType': 'Receptionist'
+                'userType': 'Receptionist',
+                'token': token.key
             })
         elif user_type == 'Admin' and user.is_staff:
             login(request, user)
+            token, _ = Token.objects.get_or_create(user=user)
             return Response({
                 'fullName': f"{user.first_name} {user.last_name}",
-                'userType': 'Admin'
+                'userType': 'Admin',
+                'token': token.key
             })
         else:
             return Response({'error': 'Invalid user type for this account'},
@@ -63,9 +65,14 @@ def login_view(request):
 
 @api_view(['POST'])
 def logout_view(request):
+    # Delete the token
+    if hasattr(request.user, 'auth_token'):
+        request.user.auth_token.delete()
     logout(request)
     return Response({'message': 'Successfully logged out'},
                    status=status.HTTP_200_OK)
+
+// ... existing code ...
 
 @api_view(['GET'])
 def user_info(request):
