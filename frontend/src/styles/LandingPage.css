@@ -1,0 +1,155 @@
+.landing-page {
+  position: relative;
+  min-height: 85vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 2rem;
+  background-image: url('https://images.unsplash.com/photo-1586773860418-d37222d8fce3?ixlib=rb-1.2.1&auto=format&fit=crop&w=1950&q=80');
+  background-size: cover;
+  background-position: center;
+  color: #fff;
+}
+
+.landing-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(27, 38, 59, 0.85);
+  z-index: 1;
+}
+
+.landing-content {
+  position: relative;
+  z-index: 2;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.landing-content h1 {
+  font-size: 3rem;
+  margin-bottom: 1rem;
+  color: #fff;
+  font-weight: 700;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+}
+
+.landing-content p {
+  font-size: 1.2rem;
+  margin-bottom: 3rem;
+  color: #e0e0e0;
+}
+
+.role-cards {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 2rem;
+  margin-top: 2rem;
+}
+
+.role-card {
+  background: rgba(255, 255, 255, 0.9);
+  border-radius: 10px;
+  padding: 2rem;
+  width: 220px;
+  color: #333;
+  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.role-card:hover {
+  transform: translateY(-10px);
+  box-shadow: 0 15px 30px rgba(0, 0, 0, 0.3);
+}
+
+.role-icon {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 1.5rem;
+  font-size: 2.5rem;
+  color: white;
+}
+
+.doctor-icon {
+  background: linear-gradient(135deg, #1976d2, #64b5f6);
+}
+
+.patient-icon {
+  background: linear-gradient(135deg, #388e3c, #81c784);
+}
+
+.receptionist-icon {
+  background: linear-gradient(135deg, #d32f2f, #ef5350);
+}
+
+.admin-icon {
+  background: linear-gradient(135deg, #7b1fa2, #ba68c8);
+}
+
+.role-card h2 {
+  font-size: 1.5rem;
+  margin-bottom: 0.5rem;
+  color: #2c3e50;
+}
+
+.role-card p {
+  font-size: 0.9rem;
+  color: #7f8c8d;
+  margin-bottom: 1.5rem;
+}
+
+.role-button {
+  display: inline-block;
+  padding: 0.8rem 1.5rem;
+  background: #2c3e50;
+  color: white;
+  border-radius: 30px;
+  text-decoration: none;
+  font-weight: 600;
+  transition: background 0.3s ease;
+  border: none;
+  cursor: pointer;
+}
+
+.role-button:hover {
+  background: #1abc9c;
+}
+
+/* Add Font Awesome for icons */
+@import url('https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css');
+
+/* Responsive adjustments */
+@media (max-width: 1024px) {
+  .role-cards {
+    gap: 1.5rem;
+  }
+  
+  .role-card {
+    width: 200px;
+    padding: 1.5rem;
+  }
+}
+
+@media (max-width: 768px) {
+  .landing-content h1 {
+    font-size: 2.5rem;
+  }
+  
+  .role-cards {
+    flex-direction: column;
+    align-items: center;
+  }
+  
+  .role-card {
+    width: 80%;
+    max-width: 300px;
+  }
+} 
