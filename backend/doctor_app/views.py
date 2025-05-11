@@ -6,11 +6,25 @@ from rest_framework import viewsets, permissions
 from rest_framework.response import Response
 from hms.models import Doctor
 from .serializers import DoctorProfileSerializer, ScheduleSerializer
+from django.utils import timezone
+from datetime import datetime
 
 @login_required
 def doctor_index(request):
-    # Optional: redirect to profile or schedule
-   return redirect('login')
+    """View to display doctor's dashboard with today's appointments."""
+    doctor = request.user.doctor
+    today = timezone.now().date()
+    appointments = Appointment.objects.filter(
+        doctor=doctor,
+        appointment_date__date=today
+    ).order_by('appointment_date')
+    
+    context = {
+        'doctor': doctor,
+        'appointments': appointments
+    }
+    return render(request, 'doctor_app/doctor_dashboard.html', context)
+
 
 
 @login_required 
