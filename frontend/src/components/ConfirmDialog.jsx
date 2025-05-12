@@ -1,22 +1,28 @@
 import React from 'react';
-import Modal from './Modal';
+import '../styles/ConfirmDialog.css';
 
-const ConfirmDialog = ({ isOpen, onClose, onConfirm, title, message, confirmText = 'Delete', cancelText = 'Cancel' }) => {
+const ConfirmDialog = ({ isOpen, title, message, onConfirm, onClose }) => {
+  if (!isOpen) return null;
+  
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title={title || 'Confirm Action'}>
+    <div className="confirm-overlay">
       <div className="confirm-dialog">
-        <p className="confirm-message">{message || 'Are you sure you want to proceed with this action?'}</p>
-        
-        <div className="modal-actions">
+        <div className="confirm-header">
+          <h3>{title || 'Confirm Action'}</h3>
+        </div>
+        <div className="confirm-body">
+          <p>{message || 'Are you sure you want to proceed?'}</p>
+        </div>
+        <div className="confirm-actions">
           <button className="cancel-btn" onClick={onClose}>
-            {cancelText}
+            Cancel
           </button>
-          <button className="danger-btn" onClick={onConfirm}>
-            {confirmText}
+          <button className="confirm-btn" onClick={onConfirm}>
+            Confirm
           </button>
         </div>
       </div>
-    </Modal>
+    </div>
   );
 };
 

@@ -8,7 +8,8 @@ const apiClient = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
-  timeout: 10000 // 10 second timeout
+  timeout: 10000, // 10 second timeout
+  withCredentials: true // Include cookies for session authentication
 });
 
 // Simple in-memory cache for requests
@@ -124,13 +125,51 @@ const MOCK_DATA = {
       patient_id: 2,
       doctor_id: 2
     }
+  ],
+  'lab-tests': [
+    {
+      id: 1,
+      patient_id: 1,
+      doctor_id: 1,
+      patient_name: 'Michael Brown',
+      test_name: 'Complete Blood Count',
+      requested_at: '2023-06-20T09:15:00',
+      status: 'completed',
+      notes: 'Check for anemia'
+    },
+    {
+      id: 2,
+      patient_id: 2,
+      doctor_id: 1,
+      patient_name: 'Emily Davis',
+      test_name: 'Blood Glucose',
+      requested_at: '2023-07-05T11:30:00',
+      status: 'pending',
+      notes: 'Fasting glucose test'
+    }
   ]
+};
+
+// Special handling for auth endpoints
+const handleAuthEndpoint = (config) => {
+  // For auth endpoints, we need to adjust the URL
+  if (config.url === '/login/') {
+    config.url = '/login/';
+    config.baseURL = 'http://127.0.0.1:8000/api'; // Ensure we're using the API endpoint
+  } else if (config.url === '/logout/') {
+    config.url = '/logout/';
+    config.baseURL = 'http://127.0.0.1:8000/api'; // Ensure we're using the API endpoint
+  }
+  return config;
 };
 
 // Request interceptor for caching and logging
 apiClient.interceptors.request.use(
   config => {
     console.log(`API Request: ${config.method.toUpperCase()} ${config.url}`, config.data || '');
+    
+    // Handle auth endpoints
+    config = handleAuthEndpoint(config);
     
     // For GET requests, check cache first
     if (config.method === 'get') {
@@ -161,9 +200,9 @@ apiClient.interceptors.request.use(
 // Debug function to check backend connectivity
 const checkBackendConnectivity = async () => {
   try {
-    const response = await fetch('http://127.0.0.1:8000/api/');
+    const response = await apiClient.get('/current-user/');
     console.log(`Backend check status: ${response.status}`);
-    return response.ok;
+    return true;
   } catch (error) {
     console.error('Backend connectivity check failed:', error);
     return false;

@@ -4,17 +4,30 @@ import apiClient from '../api/client';
 export const checkBackendConnection = async () => {
   try {
     console.log('Checking backend connection...');
-    const response = await fetch('http://127.0.0.1:8000/api/');
-    return {
-      connected: response.ok,
-      statusCode: response.status,
-      statusText: response.statusText
-    };
+    // First try to connect to a public endpoint like root API
+    try {
+      const response = await apiClient.get('/');
+      return {
+        connected: true,
+        statusCode: response.status,
+        statusText: 'Connection successful'
+      };
+    } catch (rootError) {
+      console.log('Root API check failed, trying current-user endpoint:', rootError.message);
+      
+      // If that fails, try the authenticated endpoint
+      const response = await apiClient.get('/current-user/');
+      return {
+        connected: true,
+        statusCode: response.status,
+        statusText: 'Connection successful (authenticated)'
+      };
+    }
   } catch (error) {
     console.error('Backend connection check failed:', error);
     return {
       connected: false,
-      statusCode: null,
+      statusCode: error.response?.status,
       statusText: error.message,
       error
     };

@@ -27,11 +27,13 @@ const LoginForm = ({ userType, redirectPath }) => {
 
     try {
       // Use the AuthService login method with async/await
-      await AuthService.login(
+      const user = await AuthService.login(
         credentials.username,
         credentials.password,
         userType
       );
+      
+      console.log('Login successful:', user);
       
       // Redirect to appropriate dashboard after successful login
       setTimeout(() => {
@@ -40,7 +42,16 @@ const LoginForm = ({ userType, redirectPath }) => {
       }, 1000); // Short delay for better UX
     } catch (err) {
       console.error('Login error:', err);
-      setError(err.message || 'Invalid username or password');
+      
+      // Extract error message from API response if available
+      let errorMessage = 'Invalid username or password';
+      if (err.response && err.response.data && err.response.data.error) {
+        errorMessage = err.response.data.error;
+      } else if (err.message) {
+        errorMessage = err.message;
+      }
+      
+      setError(errorMessage);
       setLoading(false);
     }
   };

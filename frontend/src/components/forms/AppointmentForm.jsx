@@ -1,7 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import apiClient from '../../api/client';
 
-const AppointmentForm = ({ appointment = {}, onSubmit, onCancel }) => {
+const AppointmentForm = ({ 
+  appointment = {}, 
+  onSubmit, 
+  onCancel, 
+  readOnly = false,
+  preselectedPatient = null,
+  preselectedDoctor = null
+}) => {
   const [formData, setFormData] = useState({
     patient_id: '',
     doctor_id: '',
@@ -28,6 +35,19 @@ const AppointmentForm = ({ appointment = {}, onSubmit, onCancel }) => {
         
         setDoctors(doctorsResponse.data || []);
         setPatients(patientsResponse.data || []);
+        
+        // Handle preselected doctor/patient
+        const newFormData = { ...formData };
+        
+        if (preselectedDoctor && preselectedDoctor.doctor_id) {
+          newFormData.doctor_id = preselectedDoctor.doctor_id;
+        }
+        
+        if (preselectedPatient && preselectedPatient.patient_id) {
+          newFormData.patient_id = preselectedPatient.patient_id;
+        }
+        
+        setFormData(newFormData);
       } catch (error) {
         console.error('Error fetching data for appointment form:', error);
         setError('Failed to load doctors and patients data.');
@@ -52,9 +72,11 @@ const AppointmentForm = ({ appointment = {}, onSubmit, onCancel }) => {
         console.error('Error formatting date/time:', error);
       }
     }
-  }, [appointment]);
+  }, [appointment, preselectedDoctor, preselectedPatient]);
 
   const handleChange = (e) => {
+    if (readOnly) return;
+    
     const { name, value } = e.target;
     setFormData(prev => ({
       ...prev,
@@ -64,31 +86,42 @@ const AppointmentForm = ({ appointment = {}, onSubmit, onCancel }) => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (readOnly) return;
+    
     setLoading(true);
     setError('');
 
     try {
       // Combine date and time for the API
       const formattedData = { ...formData };
-      if (formData.appointment_date && formData.appointment_time) {
-        formattedData.appointment_date = `${formData.appointment_date}T${formData.appointment_time}:00`;
-      }
       
-      // Add patient and doctor names for display purposes
+      // Ensure IDs are sent as numbers, not strings
       if (formData.patient_id) {
+        formattedData.patient_id = parseInt(formData.patient_id, 10);
+        
         const selectedPatient = patients.find(p => p.patient_id === parseInt(formData.patient_id));
         if (selectedPatient) {
           formattedData.patient_name = `${selectedPatient.first_name || ''} ${selectedPatient.last_name || ''}`.trim();
+          formattedData.patient = formattedData.patient_id; // Set both formats for API compatibility
         }
       }
       
       if (formData.doctor_id) {
+        formattedData.doctor_id = parseInt(formData.doctor_id, 10);
+        
         const selectedDoctor = doctors.find(d => d.doctor_id === parseInt(formData.doctor_id));
         if (selectedDoctor) {
           formattedData.doctor_name = `${selectedDoctor.first_name || ''} ${selectedDoctor.last_name || ''}`.trim();
+          formattedData.doctor = formattedData.doctor_id; // Set both formats for API compatibility
         }
       }
       
+      // Properly format the date and time
+      if (formData.appointment_date && formData.appointment_time) {
+        formattedData.appointment_date = `${formData.appointment_date}T${formData.appointment_time}:00`;
+      }
+      
+      console.log('Submitting appointment with data:', formattedData);
       let response;
       
       // Check if we're creating a new appointment or updating
@@ -100,12 +133,13 @@ const AppointmentForm = ({ appointment = {}, onSubmit, onCancel }) => {
         response = await apiClient.post('/appointments/', formattedData);
       }
       
+      console.log('Appointment saved successfully:', response.data);
       setLoading(false);
       onSubmit(response.data);
     } catch (error) {
-      setError('Failed to save appointment. Please try again.');
-      setLoading(false);
       console.error('Error saving appointment:', error);
+      setError(`Failed to save appointment: ${error.response?.data?.detail || error.message || 'Please try again.'}`);
+      setLoading(false);
     }
   };
 
@@ -122,6 +156,7 @@ const AppointmentForm = ({ appointment = {}, onSubmit, onCancel }) => {
             value={formData.patient_id || ''}
             onChange={handleChange}
             required
+            disabled={readOnly}
           >
             <option value="">Select Patient</option>
             {patients.map(patient => (
@@ -140,6 +175,7 @@ const AppointmentForm = ({ appointment = {}, onSubmit, onCancel }) => {
             value={formData.doctor_id || ''}
             onChange={handleChange}
             required
+            disabled={readOnly}
           >
             <option value="">Select Doctor</option>
             {doctors.map(doctor => (
@@ -161,6 +197,7 @@ const AppointmentForm = ({ appointment = {}, onSubmit, onCancel }) => {
             value={formData.appointment_date || ''}
             onChange={handleChange}
             required
+            readOnly={readOnly}
           />
         </div>
         
@@ -173,6 +210,7 @@ const AppointmentForm = ({ appointment = {}, onSubmit, onCancel }) => {
             value={formData.appointment_time || ''}
             onChange={handleChange}
             required
+            readOnly={readOnly}
           />
         </div>
       </div>
@@ -186,6 +224,7 @@ const AppointmentForm = ({ appointment = {}, onSubmit, onCancel }) => {
           value={formData.reason || ''}
           onChange={handleChange}
           required
+          readOnly={readOnly}
         />
       </div>
       
@@ -197,6 +236,7 @@ const AppointmentForm = ({ appointment = {}, onSubmit, onCancel }) => {
             name="status"
             value={formData.status || 'Scheduled'}
             onChange={handleChange}
+            disabled={readOnly}
           >
             <option value="Scheduled">Scheduled</option>
             <option value="Confirmed">Confirmed</option>
@@ -215,6 +255,7 @@ const AppointmentForm = ({ appointment = {}, onSubmit, onCancel }) => {
           rows="3"
           value={formData.notes || ''}
           onChange={handleChange}
+          readOnly={readOnly}
         ></textarea>
       </div>
       
@@ -225,15 +266,17 @@ const AppointmentForm = ({ appointment = {}, onSubmit, onCancel }) => {
           onClick={onCancel}
           disabled={loading}
         >
-          Cancel
+          {readOnly ? 'Close' : 'Cancel'}
         </button>
-        <button 
-          type="submit" 
-          className="submit-btn" 
-          disabled={loading}
-        >
-          {loading ? 'Saving...' : (appointment && appointment.appointment_id) ? 'Update Appointment' : 'Schedule Appointment'}
-        </button>
+        {!readOnly && (
+          <button 
+            type="submit" 
+            className="submit-btn" 
+            disabled={loading}
+          >
+            {loading ? 'Saving...' : (appointment && appointment.appointment_id) ? 'Update Appointment' : 'Schedule Appointment'}
+          </button>
+        )}
       </div>
     </form>
   );

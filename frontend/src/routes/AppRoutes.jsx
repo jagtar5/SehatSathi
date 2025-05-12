@@ -6,6 +6,7 @@ import DoctorLogin from '../pages/DoctorLogin';
 import PatientLogin from '../pages/PatientLogin';
 import ReceptionistLogin from '../pages/ReceptionistLogin';
 import AdminLogin from '../pages/AdminLogin';
+import AdminRoute from '../components/AdminRoute';
 import { Navigate } from 'react-router-dom';
 
 // Placeholder components for future implementation
@@ -39,7 +40,18 @@ export default function AppRoutes() {
       
       {/* Dashboard Routes */}
       <Route path="/doctor" element={<DoctorDashboard />} />
-      <Route path="/hms" element={<HMSDashboard />} />
+      
+      {/* Admin protected routes */}
+      <Route path="/admin" element={<AdminRoute />}>
+        <Route path="" element={<Navigate to="/hms" replace />} />
+        <Route path="dashboard" element={<HMSDashboard />} />
+      </Route>
+      
+      {/* Keep this route for backward compatibility */}
+      <Route path="/hms" element={<AdminRoute />}>
+        <Route path="" element={<HMSDashboard />} />
+      </Route>
+      
       <Route path="/patient" element={<PatientDashboard />} />
       <Route path="/receptionist" element={<ReceptionistDashboard />} />
       
