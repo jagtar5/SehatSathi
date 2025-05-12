@@ -1,4 +1,3 @@
-// Authentication service that connects to the backend API
 import apiClient from '../api/client';
 
 const AuthService = {
@@ -9,12 +8,16 @@ const AuthService = {
     }
 
     try {
+<<<<<<< HEAD
       // Call our custom API login endpoint
+=======
+>>>>>>> 5b558ed6f9668426163c0565ae68c8f3f1845c07
       const response = await apiClient.post('/login/', {
         username,
         password,
         userType
       });
+<<<<<<< HEAD
 
       if (response.status === 200 && response.data) {
         // The API now returns user data directly
@@ -38,18 +41,20 @@ const AuthService = {
       // For development/demo purposes, fall back to the hardcoded credentials
       // Remove this in production
       console.warn('Falling back to development credentials');
+=======
+>>>>>>> 5b558ed6f9668426163c0565ae68c8f3f1845c07
       
-      // Default accepted credentials for demo
-      const validCredentials = {
-        Doctor: { username: 'doctor', password: 'doctor123' },
-        Patient: { username: 'patient', password: 'patient123' },
-        Receptionist: { username: 'receptionist', password: 'receptionist123' },
-        Admin: { username: 'admin', password: 'admin123' }
+      const user = {
+        username,
+        userType,
+        fullName: response.data.fullName,
+        token: response.data.token
       };
       
-      // Check if credentials match the valid ones for the role
-      const validForRole = validCredentials[userType];
+      // Store user info in localStorage
+      localStorage.setItem('user', JSON.stringify(user));
       
+<<<<<<< HEAD
       if (validForRole && 
           username === validForRole.username && 
           password === validForRole.password) {
@@ -87,6 +92,14 @@ const AuthService = {
         return user;
       }
       
+=======
+      // Set the auth token for future requests
+      apiClient.defaults.headers.common['Authorization'] = `Token ${user.token}`;
+      
+      return user;
+    } catch (error) {
+      console.error('Login error:', error);
+>>>>>>> 5b558ed6f9668426163c0565ae68c8f3f1845c07
       throw error;
     }
   },
@@ -94,36 +107,39 @@ const AuthService = {
   // Logout function
   logout: async () => {
     try {
+<<<<<<< HEAD
       // Clear the authorization header
       delete apiClient.defaults.headers.common['Authorization'];
       console.log('Cleared auth token from headers');
       
       // Call our custom API logout endpoint
+=======
+>>>>>>> 5b558ed6f9668426163c0565ae68c8f3f1845c07
       await apiClient.post('/logout/');
     } catch (error) {
       console.error('Logout error:', error);
     } finally {
+<<<<<<< HEAD
       // Always remove local storage data regardless of server response
       localStorage.removeItem('user');
+=======
+      localStorage.removeItem('user');
+      delete apiClient.defaults.headers.common['Authorization'];
+>>>>>>> 5b558ed6f9668426163c0565ae68c8f3f1845c07
     }
   },
   
   // Get current user
   getCurrentUser: () => {
     const user = localStorage.getItem('user');
-    return user ? JSON.parse(user) : null;
-  },
-  
-  // Check if user is logged in
-  isLoggedIn: () => {
-    return !!localStorage.getItem('user');
-  },
-  
-  // Check if user has a specific role
-  hasRole: (role) => {
-    const user = AuthService.getCurrentUser();
-    return user ? user.userType === role : false;
+    if (user) {
+      const userData = JSON.parse(user);
+      // Set the auth token for future requests
+      apiClient.defaults.headers.common['Authorization'] = `Token ${userData.token}`;
+      return userData;
+    }
+    return null;
   }
 };
 
-export default AuthService; 
+export default AuthService;

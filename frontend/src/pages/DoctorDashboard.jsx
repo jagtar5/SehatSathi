@@ -10,7 +10,7 @@ import '../styles/Dashboard.css';
 
 export default function DoctorDashboard() {
   const [activeTab, setActiveTab] = useState('profile');
-  const [doctors, setDoctors] = useState([]);
+  const [currentDoctor, setCurrentDoctor] = useState(null);
   const [schedules, setSchedules] = useState([]);
   const [doctorSchedules, setDoctorSchedules] = useState([]);
   const [patients, setPatients] = useState([]);
@@ -80,6 +80,7 @@ export default function DoctorDashboard() {
       dataFetched.current = true;
       
       try {
+<<<<<<< HEAD
         console.log("Fetching data for doctor:", user);
         // Initialize with default data in case API calls fail
         const defaultDoctorData = initializeDefaultDoctorData(user);
@@ -224,6 +225,20 @@ export default function DoctorDashboard() {
         }
         
         setDataInitialized(true);
+=======
+        // Fetch current doctor's data
+        const doctorResponse = await apiClient.get('/doctors/me/');
+        setCurrentDoctor(doctorResponse.data);
+
+        // Fetch schedules and patients
+        const [schedulesResponse, patientsResponse] = await Promise.all([
+          apiClient.get('/schedules/'),
+          apiClient.get('/patients/')
+        ]);
+        
+        setSchedules(schedulesResponse.data);
+        setPatients(patientsResponse.data);
+>>>>>>> 5b558ed6f9668426163c0565ae68c8f3f1845c07
         setLoading(false);
       } catch (err) {
         console.error("Critical error in dashboard data fetching:", err);
@@ -238,6 +253,7 @@ export default function DoctorDashboard() {
     fetchData();
   }, [user]); // Only depend on user
 
+<<<<<<< HEAD
   // Find current doctor data with more robust matching
   const currentDoctor = doctors.find(d => {
     // First try to match by doctorId from user object
@@ -260,6 +276,8 @@ export default function DoctorDashboard() {
       d.first_name.toLowerCase() === user.username.toLowerCase());
   }) || profileData;
 
+=======
+>>>>>>> 5b558ed6f9668426163c0565ae68c8f3f1845c07
   // Handle tab change
   const handleTabChange = (tab) => {
     setActiveTab(tab);
@@ -460,31 +478,36 @@ export default function DoctorDashboard() {
           <div className="doctor-avatar">
             <i className="fas fa-user-md"></i>
           </div>
+<<<<<<< HEAD
           <h3>Dr. {doctorName} {currentDoctor?.last_name || ''}</h3>
           <p>{doctorSpecialty}</p>
+=======
+          <h3>Dr. {currentDoctor?.first_name || ''} {currentDoctor?.last_name || ''}</h3>
+          <p>{currentDoctor?.specialization || 'Specialist'}</p>
+>>>>>>> 5b558ed6f9668426163c0565ae68c8f3f1845c07
         </div>
         
         <nav className="dashboard-nav">
           <button 
-            className={`nav-item ${activeTab === 'profile' ? 'active' : ''}`}
+            className={nav-item ${activeTab === 'profile' ? 'active' : ''}}
             onClick={() => handleTabChange('profile')}
           >
             <i className="fas fa-user-circle"></i> Profile
           </button>
           <button 
-            className={`nav-item ${activeTab === 'schedule' ? 'active' : ''}`}
+            className={nav-item ${activeTab === 'schedule' ? 'active' : ''}}
             onClick={() => handleTabChange('schedule')}
           >
             <i className="fas fa-calendar-alt"></i> Schedule
           </button>
           <button 
-            className={`nav-item ${activeTab === 'patients' ? 'active' : ''}`}
+            className={nav-item ${activeTab === 'patients' ? 'active' : ''}}
             onClick={() => handleTabChange('patients')}
           >
             <i className="fas fa-users"></i> Patients
           </button>
           <button 
-            className={`nav-item ${activeTab === 'lab' ? 'active' : ''}`}
+            className={nav-item ${activeTab === 'lab' ? 'active' : ''}}
             onClick={() => handleTabChange('lab')}
           >
             <i className="fas fa-flask"></i> Lab Tests
@@ -500,6 +523,7 @@ export default function DoctorDashboard() {
               <div className="profile-info">
                 <div className="info-group">
                   <label>Full Name:</label>
+<<<<<<< HEAD
                   <p>Dr. {doctorName} {currentDoctor?.last_name || ''}</p>
                 </div>
                 <div className="info-group">
@@ -513,6 +537,21 @@ export default function DoctorDashboard() {
                 <div className="info-group">
                   <label>Email:</label>
                   <p>{currentDoctor?.email || currentDoctor?.user?.email || user?.email || 'Not specified'}</p>
+=======
+                  <p>Dr. {currentDoctor?.first_name || ''} {currentDoctor?.last_name || ''}</p>
+                </div>
+                <div className="info-group">
+                  <label>Specialization:</label>
+                  <p>{currentDoctor?.specialization || 'Not specified'}</p>
+                </div>
+                <div className="info-group">
+                  <label>Department:</label>
+                  <p>{currentDoctor?.department || 'Not specified'}</p>
+                </div>
+                <div className="info-group">
+                  <label>Email:</label>
+                  <p>{currentDoctor?.email || 'Not specified'}</p>
+>>>>>>> 5b558ed6f9668426163c0565ae68c8f3f1845c07
                 </div>
                 <div className="info-group">
                   <label>Contact:</label>
@@ -621,6 +660,7 @@ export default function DoctorDashboard() {
                       </tr>
                     </thead>
                     <tbody>
+<<<<<<< HEAD
                       {schedules.map(appointment => {
                         // Ensure appointment has valid data
                         const appointmentDate = appointment.appointment_date ? 
@@ -653,6 +693,28 @@ export default function DoctorDashboard() {
                           </tr>
                         );
                       })}
+=======
+                      {schedules.map(appointment => (
+                        <tr key={appointment.appointment_id}>
+                          <td>{appointment.patient_name}</td>
+                          <td>{new Date(appointment.appointment_date).toLocaleString()}</td>
+                          <td>{appointment.reason}</td>
+                          <td>
+                            <span className={status-badge status-${appointment.status.toLowerCase()}}>
+                              {appointment.status}
+                            </span>
+                          </td>
+                          <td>
+                            <button className="action-btn view-btn">
+                              <i className="fas fa-eye"></i>
+                            </button>
+                            <button className="action-btn edit-btn">
+                              <i className="fas fa-edit"></i>
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+>>>>>>> 5b558ed6f9668426163c0565ae68c8f3f1845c07
                     </tbody>
                   </table>
                 </div>
@@ -1033,4 +1095,4 @@ export default function DoctorDashboard() {
       )}
     </div>
   );
-} 
+}

@@ -1,13 +1,12 @@
 import axios from 'axios';
 
-console.log('API Client initializing with base URL:', 'http://127.0.0.1:8000/api');
-
 // Create axios instance
 const apiClient = axios.create({
   baseURL: 'http://127.0.0.1:8000/api',
   headers: {
     'Content-Type': 'application/json',
   },
+<<<<<<< HEAD
   timeout: 10000, // 10 second timeout
   withCredentials: true // Include cookies for session authentication
 });
@@ -164,10 +163,18 @@ const handleAuthEndpoint = (config) => {
 };
 
 // Request interceptor for caching and logging
+=======
+  withCredentials: true, // Important for handling cookies
+  timeout: 10000 // 10 second timeout
+});
+
+// Request interceptor for authentication and logging
+>>>>>>> 5b558ed6f9668426163c0565ae68c8f3f1845c07
 apiClient.interceptors.request.use(
   config => {
     console.log(`API Request: ${config.method.toUpperCase()} ${config.url}`, config.data || '');
     
+<<<<<<< HEAD
     // Handle auth endpoints
     config = handleAuthEndpoint(config);
     
@@ -187,8 +194,17 @@ apiClient.interceptors.request.use(
             request: {}
           });
         };
+=======
+    // Get the auth token from localStorage
+    const user = localStorage.getItem('user');
+    if (user) {
+      const { token } = JSON.parse(user);
+      if (token) {
+        config.headers.Authorization = `Token ${token}`;
+>>>>>>> 5b558ed6f9668426163c0565ae68c8f3f1845c07
       }
     }
+    
     return config;
   },
   error => {
@@ -197,6 +213,7 @@ apiClient.interceptors.request.use(
   }
 );
 
+<<<<<<< HEAD
 // Debug function to check backend connectivity
 const checkBackendConnectivity = async () => {
   try {
@@ -220,55 +237,47 @@ checkBackendConnectivity()
   });
 
 // Response interceptor for caching and error handling
+=======
+// Response interceptor for error handling
+>>>>>>> 5b558ed6f9668426163c0565ae68c8f3f1845c07
 apiClient.interceptors.response.use(
   response => {
     // Log successful responses
     console.log(`API Response (${response.config.url}):`, response.data);
-    
-    // Cache the successful GET response
-    if (response.config.method === 'get') {
-      cache.set(response.config.url, response.data);
-    }
     return response;
   },
   error => {
-    console.warn('API Error:', error);
+    console.error('API Error:', error);
     
-    if (error.config) {
-      const path = error.config.url;
-      console.error(`API Request to ${path} failed:`, error.message);
-      
-      if (error.response) {
-        console.error(`Status: ${error.response.status}`, error.response.data);
+    if (error.response) {
+      // Handle specific error cases
+      switch (error.response.status) {
+        case 401:
+          // Unauthorized - clear user data and redirect to login
+          localStorage.removeItem('user');
+          window.location.href = '/login';
+          break;
+        case 403:
+          // Forbidden - user doesn't have permission
+          console.error('Permission denied');
+          break;
+        case 404:
+          // Not found
+          console.error('Resource not found');
+          break;
+        default:
+          console.error(`API Error: ${error.response.status}`, error.response.data);
       }
-      
-      // If it's a network error or backend not running, return mock data
-      if (error.code === 'ECONNABORTED' || error.code === 'ERR_NETWORK' || !error.response) {
-        console.warn(`Network error detected. Using mock data for: ${path}`);
-        
-        if (path) {
-          // Extract endpoint from full path
-          const endpoint = path.split('/').pop();
-          if (MOCK_DATA[endpoint]) {
-            console.log(`Found mock data for ${endpoint}`);
-            // Cache this mock data too
-            cache.set(path, MOCK_DATA[endpoint]);
-            return Promise.resolve({ data: MOCK_DATA[endpoint], config: error.config });
-          }
-        }
-      } else if (error.response && error.response.status === 404) {
-        // For 404s, also use mock data if available
-        const endpoint = path.split('/').pop();
-        if (MOCK_DATA[endpoint]) {
-          console.log(`Resource not found. Using mock data for ${endpoint}`);
-          cache.set(path, MOCK_DATA[endpoint]);
-          return Promise.resolve({ data: MOCK_DATA[endpoint], config: error.config });
-        }
-      }
+    } else if (error.request) {
+      // Network error
+      console.error('Network error - no response received');
+    } else {
+      // Other error
+      console.error('Error:', error.message);
     }
     
     return Promise.reject(error);
   }
 );
 
-export default apiClient; 
+export default apiClient;
