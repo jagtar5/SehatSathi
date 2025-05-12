@@ -1,11 +1,11 @@
-from django.shortcuts import render, redirect
-from hms.models import Appointment, Patient, LabTestOrder
-from django.contrib.auth.decorators import login_required
-from .forms import DoctorProfileForm, LabTestOrderForm
-from rest_framework import viewsets, permissions
-from rest_framework.response import Response
+from django.shortcuts import render,redirect
+from hms.models import Appointment,Patient,LabTestOrder  # Import the Appointment model
+from django.contrib.auth.decorators import login_required # Import login_required
+from .forms import DoctorProfileForm,LabTestOrderForm
+from rest_framework import viewsets, filters
 from hms.models import Doctor
-from .serializers import DoctorProfileSerializer, ScheduleSerializer
+from .models import DoctorSchedule
+from .serializers import DoctorProfileSerializer, ScheduleSerializer, DoctorScheduleSerializer
 
 @login_required
 def doctor_index(request):
@@ -61,19 +61,25 @@ def order_lab_test(request):
     return render(request, 'doctor_app/order_lab_test.html', {'form': form})
 
 class DoctorProfileViewSet(viewsets.ModelViewSet):
+    queryset = Doctor.objects.all()
     serializer_class = DoctorProfileSerializer
-    permission_classes = [permissions.IsAuthenticated]
-
-    def get_queryset(self):
-        if self.request.user.is_staff:
-            return Doctor.objects.all()
-        return Doctor.objects.filter(user=self.request.user)
 
 class ScheduleViewSet(viewsets.ModelViewSet):
     serializer_class = ScheduleSerializer
-    permission_classes = [permissions.IsAuthenticated]
-
+    
     def get_queryset(self):
-        if not hasattr(self.request.user, 'doctor'):
-            return Appointment.objects.none()
-        return Appointment.objects.filter(doctor=self.request.user.doctor)
+        return Appointment.objects.all().order_by('appointment_date')
+
+# Add the new viewset for doctor schedules
+class DoctorScheduleViewSet(viewsets.ModelViewSet):
+    serializer_class = DoctorScheduleSerializer
+    queryset = DoctorSchedule.objects.all()
+    filter_backends = [filters.SearchFilter]
+    search_fields = ['doctor__doctor_id', 'day_of_week']
+    
+    def get_queryset(self):
+        queryset = DoctorSchedule.objects.all()
+        doctor_id = self.request.query_params.get('doctor')
+        if doctor_id:
+            queryset = queryset.filter(doctor__doctor_id=doctor_id)
+        return queryset

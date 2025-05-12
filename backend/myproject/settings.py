@@ -47,20 +47,20 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'rest_framework',
-    'corsheaders',
-    'hms',
-    'doctor_app',
-    'patient_app',
-    'receptionist_app',
-    'admin_app',
+    'hms',         # Core HMS app for models
+    'doctor_app',      # Doctor features
+    'patient_app',     # Patient features
+    'receptionist_app', # Receptionist features
+    'admin_app',       # Administrator features
     'auditlog',
+    'rest_framework',  # Django REST framework for APIs
+    'corsheaders',     # CORS headers for API
 ]
 
 MIDDLEWARE = [
+    'corsheaders.middleware.CorsMiddleware', # CORS middleware (must be at the top)
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
-    'corsheaders.middleware.CorsMiddleware',  # Add CORS middleware
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
@@ -155,33 +155,20 @@ SESSION_COOKIE_AGE = 1209600  # 2 weeks in seconds (optional)
 SESSION_SAVE_EVERY_REQUEST = True  # Helps keep session alive
 SESSION_EXPIRE_AT_BROWSER_CLOSE = False  # Persistent sessions
 
-# REST Framework settings
+# REST Framework and CORS settings
 REST_FRAMEWORK = {
+    'DEFAULT_PERMISSION_CLASSES': [
+        'rest_framework.permissions.AllowAny'
+    ],
     'DEFAULT_AUTHENTICATION_CLASSES': [
         'rest_framework.authentication.SessionAuthentication',
-    ],
-    'DEFAULT_PERMISSION_CLASSES': [
-        'rest_framework.permissions.IsAuthenticated',
-    ],
+        'rest_framework.authentication.BasicAuthentication',
+    ]
 }
 
-# CORS settings
 CORS_ALLOWED_ORIGINS = [
-    "http://localhost:3000",  # React frontend
+    'http://localhost:3000',
+    'http://127.0.0.1:3000',
 ]
 
-CORS_ALLOW_CREDENTIALS = True
-
-# CSRF settings
-CSRF_TRUSTED_ORIGINS = [
-    "http://localhost:3000",  # React frontend
-]
-
-CSRF_COOKIE_SAMESITE = 'Lax'
-SESSION_COOKIE_SAMESITE = 'Lax'
-CSRF_COOKIE_HTTPONLY = False  # False to allow JS access
-SESSION_COOKIE_HTTPONLY = True
-
-# If using HTTPS:
-# CSRF_COOKIE_SECURE = True
-# SESSION_COOKIE_SECURE = True
+CORS_ALLOW_CREDENTIALS = True  # Allow cookies to be sent with CORS requests

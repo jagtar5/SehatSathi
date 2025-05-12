@@ -1,6 +1,5 @@
 from rest_framework import serializers
-from django.contrib.auth.models import User
-from .models import Appointment, Doctor, Patient, Receptionist
+from .models import Appointment, Doctor, Patient, LabTestOrder
 
 class DoctorSerializer(serializers.ModelSerializer):
     class Meta:
@@ -26,21 +25,16 @@ class AppointmentSerializer(serializers.ModelSerializer):
     def get_patient_name(self, obj):
         return f"{obj.patient.first_name} {obj.patient.last_name}"
 
-class UserSerializer(serializers.ModelSerializer):
-    userType = serializers.SerializerMethodField()
-
+class LabTestOrderSerializer(serializers.ModelSerializer):
+    patient_name = serializers.SerializerMethodField()
+    doctor_name = serializers.SerializerMethodField()
+    
     class Meta:
-        model = User
-        fields = ('id', 'username', 'first_name', 'last_name', 'email', 'userType')
-        read_only_fields = ('id', 'userType')
-
-    def get_userType(self, obj):
-        if hasattr(obj, 'doctor'):
-            return 'Doctor'
-        elif hasattr(obj, 'patient'):
-            return 'Patient'
-        elif hasattr(obj, 'receptionist'):
-            return 'Receptionist'
-        elif obj.is_staff:
-            return 'Admin'
-        return None
+        model = LabTestOrder
+        fields = ['id', 'doctor', 'patient', 'test_name', 'notes', 'status', 'requested_at', 'patient_name', 'doctor_name']
+    
+    def get_patient_name(self, obj):
+        return f"{obj.patient.first_name} {obj.patient.last_name}"
+    
+    def get_doctor_name(self, obj):
+        return f"Dr. {obj.doctor.first_name} {obj.doctor.last_name}"
