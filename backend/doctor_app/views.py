@@ -4,31 +4,13 @@ from django.contrib.auth.decorators import login_required # Import login_require
 from .forms import DoctorProfileForm,LabTestOrderForm
 from rest_framework import viewsets, filters
 from hms.models import Doctor
-<<<<<<< HEAD
 from .models import DoctorSchedule
 from .serializers import DoctorProfileSerializer, ScheduleSerializer, DoctorScheduleSerializer
-=======
-from .serializers import DoctorProfileSerializer, ScheduleSerializer
-from django.utils import timezone
-from datetime import datetime
->>>>>>> 5b558ed6f9668426163c0565ae68c8f3f1845c07
 
 @login_required
 def doctor_index(request):
-    """View to display doctor's dashboard with today's appointments."""
-    doctor = request.user.doctor
-    today = timezone.now().date()
-    appointments = Appointment.objects.filter(
-        doctor=doctor,
-        appointment_date__date=today
-    ).order_by('appointment_date')
-    
-    context = {
-        'doctor': doctor,
-        'appointments': appointments
-    }
-    return render(request, 'doctor_app/doctor_dashboard.html', context)
-
+    # Optional: redirect to profile or schedule
+   return redirect('login')
 
 
 @login_required 
@@ -86,7 +68,6 @@ class ScheduleViewSet(viewsets.ModelViewSet):
     serializer_class = ScheduleSerializer
     
     def get_queryset(self):
-<<<<<<< HEAD
         return Appointment.objects.all().order_by('appointment_date')
 
 # Add the new viewset for doctor schedules
@@ -102,8 +83,3 @@ class DoctorScheduleViewSet(viewsets.ModelViewSet):
         if doctor_id:
             queryset = queryset.filter(doctor__doctor_id=doctor_id)
         return queryset
-=======
-        if not hasattr(self.request.user, 'doctor'):
-            return Appointment.objects.none()
-        return Appointment.objects.filter(doctor=self.request.user.doctor)
->>>>>>> 5b558ed6f9668426163c0565ae68c8f3f1845c07

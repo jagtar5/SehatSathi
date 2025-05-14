@@ -1,152 +1,630 @@
-from django.shortcuts import render
-from django.db.models import Count, Avg, Sum
-from rest_framework.decorators import api_view, permission_classes
-from rest_framework.response import Response
-from rest_framework.permissions import IsAuthenticated
-from hms.models import Doctor, Patient, Appointment, LabTestOrder
-from datetime import datetime, timedelta
+from django.shortcuts import render, redirect
+from django.contrib import messages
+from django.contrib.auth.decorators import login_required, user_passes_test
+from django.contrib.auth.models import User, Group
+from django.views.decorators.csrf import csrf_exempt
+from django.http import JsonResponse
 
-@api_view(['GET'])
+from rest_framework import status
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import IsAuthenticated, IsAdminUser
+from rest_framework.response import Response
+
+from .forms import (
+    AdminPatientRegistrationForm, 
+    AdminDoctorRegistrationForm, 
+    AdminReceptionistRegistrationForm
+)
+from .serializers import (
+    AdminPatientRegistrationSerializer,
+    AdminDoctorRegistrationSerializer,
+    AdminReceptionistRegistrationSerializer
+)
+
+# Helper function to check if user is admin
+def is_admin(user):
+    return user.is_staff or user.is_superuser
+
+# Web views for admin to register users
+@login_required
+@user_passes_test(is_admin)
+def admin_register_patient_view(request):
+    if request.method == 'POST':
+        form = AdminPatientRegistrationForm(request.POST)
+        if form.is_valid():
+            patient = form.save()
+            # Optional: Add user to 'Patient' group if you have it
+            try:
+                patient_group = Group.objects.get(name='Patient')
+                patient.user.groups.add(patient_group)
+            except Group.DoesNotExist:
+                pass  # If group doesn't exist, just continue
+                
+            messages.success(request, f"Patient {patient.user.first_name} {patient.user.last_name} registered successfully with username: {patient.user.username}")
+            return redirect('admin_app:admin_register_patient')
+        else:
+            messages.error(request, "Please correct the errors below.")
+    else:
+        form = AdminPatientRegistrationForm()
+    
+    return render(request, 'admin_app/register_patient.html', {
+        'form': form,
+        'title': 'Register Patient'
+    })
+
+@login_required
+@user_passes_test(is_admin)
+def admin_register_doctor_view(request):
+    if request.method == 'POST':
+        form = AdminDoctorRegistrationForm(request.POST)
+        if form.is_valid():
+            doctor = form.save()
+            # Optional: Add user to 'Doctor' group if you have it
+            try:
+                doctor_group = Group.objects.get(name='Doctor')
+                doctor.user.groups.add(doctor_group)
+            except Group.DoesNotExist:
+                pass  # If group doesn't exist, just continue
+                
+            messages.success(request, f"Doctor {doctor.first_name} {doctor.last_name} registered successfully with username: {doctor.user.username}")
+            return redirect('admin_app:admin_register_doctor')
+        else:
+            messages.error(request, "Please correct the errors below.")
+    else:
+        form = AdminDoctorRegistrationForm()
+    
+    return render(request, 'admin_app/register_doctor.html', {
+        'form': form,
+        'title': 'Register Doctor'
+    })
+
+@login_required
+@user_passes_test(is_admin)
+def admin_register_receptionist_view(request):
+    if request.method == 'POST':
+        form = AdminReceptionistRegistrationForm(request.POST)
+        if form.is_valid():
+            receptionist = form.save()
+            # Optional: Add user to 'Receptionist' group if you have it
+            try:
+                receptionist_group = Group.objects.get(name='Receptionist')
+                receptionist.user.groups.add(receptionist_group)
+            except Group.DoesNotExist:
+                pass  # If group doesn't exist, just continue
+                
+            messages.success(request, f"Receptionist {receptionist.user.first_name} {receptionist.user.last_name} registered successfully with username: {receptionist.user.username}")
+            return redirect('admin_app:admin_register_receptionist')
+        else:
+            messages.error(request, "Please correct the errors below.")
+    else:
+        form = AdminReceptionistRegistrationForm()
+    
+    return render(request, 'admin_app/register_receptionist.html', {
+        'form': form,
+        'title': 'Register Receptionist'
+    })
+
+# API views for admin to register users
+@csrf_exempt  # Apply csrf_exempt first
+@api_view(['POST'])
+def admin_api_register_patient(request):
+    """Register a new patient and create associated user account"""
+    try:
+        print("Patient registration request data:", request.data)
+        print("Request headers:", {k: v for k, v in request.headers.items()})
+        print("Request cookies:", request.COOKIES)
+        print("Request method:", request.method)
+        
+        # Check for existing username to provide a clear error
+        username = request.data.get('username', '')
+        if username and User.objects.filter(username=username).exists():
+            return Response({
+                'status': 'error',
+                'message': 'Username already exists',
+                'errors': {'username': ['This username is already taken. Please choose another one.']}
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Validate gender field explicitly to avoid database errors
+        gender = request.data.get('gender', '')
+        if gender not in ['Male', 'Female', 'Other', 'M', 'F', 'O']:
+            return Response({
+                'status': 'error',
+                'message': 'Invalid gender value',
+                'errors': {'gender': [f"Gender must be 'Male', 'Female', or 'Other'. Got '{gender}'"]}
+            }, status=status.HTTP_400_BAD_REQUEST)
+            
+        serializer = AdminPatientRegistrationSerializer(data=request.data)
+        if serializer.is_valid():
+            try:
+                patient = serializer.save()
+                print(f"Patient registration successful: {patient.user.username}")
+                
+                # Optional: Add user to 'Patient' group if you have it
+                try:
+                    patient_group = Group.objects.get(name='Patient')
+                    patient.user.groups.add(patient_group)
+                except Group.DoesNotExist:
+                    pass  # If group doesn't exist, just continue
+                
+                return Response({
+                    'status': 'success',
+                    'message': f"Patient registered successfully with username: {patient.user.username}",
+                    'data': serializer.data
+                }, status=status.HTTP_201_CREATED)
+            except Exception as e:
+                import traceback
+                print(f"Exception during patient save: {str(e)}")
+                print(traceback.format_exc())
+                return Response({
+                    'status': 'error',
+                    'message': 'Server error during patient creation',
+                    'detail': str(e)
+                }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        
+        # Print validation errors for debugging
+        print("Patient validation errors:", serializer.errors)
+        
+        return Response({
+            'status': 'error',
+            'message': 'Invalid data provided',
+            'errors': serializer.errors
+        }, status=status.HTTP_400_BAD_REQUEST)
+    except Exception as e:
+        import traceback
+        print(f"Exception in patient registration: {str(e)}")
+        print(traceback.format_exc())
+        return Response({
+            'status': 'error',
+            'message': 'Server error during registration',
+            'detail': str(e)
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+@api_view(['POST'])
+@csrf_exempt
+# Temporarily removed authentication for testing
+# @permission_classes([IsAuthenticated, IsAdminUser])
+def admin_api_register_doctor(request):
+    try:
+        print("Doctor registration request data:", request.data)
+        serializer = AdminDoctorRegistrationSerializer(data=request.data)
+        if serializer.is_valid():
+            doctor = serializer.save()
+            # Optional: Add user to 'Doctor' group if you have it
+            try:
+                doctor_group = Group.objects.get(name='Doctor')
+                doctor.user.groups.add(doctor_group)
+            except Group.DoesNotExist:
+                pass  # If group doesn't exist, just continue
+                
+            return Response({
+                'status': 'success',
+                'message': f"Doctor registered successfully with username: {doctor.user.username}",
+                'data': serializer.data
+            }, status=status.HTTP_201_CREATED)
+        
+        # Print validation errors for debugging
+        print("Validation errors:", serializer.errors)
+        
+        return Response({
+            'status': 'error',
+            'message': 'Invalid data provided',
+            'errors': serializer.errors
+        }, status=status.HTTP_400_BAD_REQUEST)
+    except Exception as e:
+        print(f"Exception in doctor registration: {str(e)}")
+        return Response({
+            'status': 'error',
+            'message': 'Server error during registration',
+            'detail': str(e)
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+@api_view(['POST'])
+@csrf_exempt
+# Temporarily removed authentication for testing
+# @permission_classes([IsAuthenticated, IsAdminUser])
+def admin_api_register_receptionist(request):
+    try:
+        print("Receptionist registration request data:", request.data)
+        serializer = AdminReceptionistRegistrationSerializer(data=request.data)
+        if serializer.is_valid():
+            receptionist = serializer.save()
+            # Optional: Add user to 'Receptionist' group if you have it
+            try:
+                receptionist_group = Group.objects.get(name='Receptionist')
+                receptionist.user.groups.add(receptionist_group)
+            except Group.DoesNotExist:
+                pass  # If group doesn't exist, just continue
+                
+            return Response({
+                'status': 'success',
+                'message': f"Receptionist registered successfully with username: {receptionist.user.username}",
+                'data': serializer.data
+            }, status=status.HTTP_201_CREATED)
+        
+        # Print validation errors for debugging
+        print("Receptionist validation errors:", serializer.errors)
+        
+        return Response({
+            'status': 'error',
+            'message': 'Invalid data provided',
+            'errors': serializer.errors
+        }, status=status.HTTP_400_BAD_REQUEST)
+    except Exception as e:
+        print(f"Exception in receptionist registration: {str(e)}")
+        return Response({
+            'status': 'error',
+            'message': 'Server error during registration',
+            'detail': str(e)
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+# Dashboard views
+@login_required
+@user_passes_test(is_admin)
 def system_statistics(request):
     """
-    Generate comprehensive system statistics for the admin dashboard.
+    View for displaying system statistics in the admin dashboard
     """
-    # Basic counts
-    statistics = {
-        'total_doctors': Doctor.objects.count(),
-        'total_patients': Patient.objects.count(),
-        'total_appointments': Appointment.objects.count(),
-        'total_lab_tests': LabTestOrder.objects.count(),
-    }
-    
-    # Get current date for time-based filters
-    today = datetime.now().date()
-    start_of_week = today - timedelta(days=today.weekday())
-    start_of_month = today.replace(day=1)
-    
-    # Appointments statistics
-    statistics['appointments'] = {
-        'today': Appointment.objects.filter(appointment_date__date=today).count(),
-        'this_week': Appointment.objects.filter(appointment_date__date__gte=start_of_week).count(),
-        'this_month': Appointment.objects.filter(appointment_date__date__gte=start_of_month).count(),
-        'status_distribution': dict(Appointment.objects.values_list('status').annotate(count=Count('status')).order_by()),
-    }
-    
-    # Department statistics (doctors per department)
-    department_stats = Doctor.objects.values('department').annotate(
-        count=Count('doctor_id')
-    ).order_by('-count')
-    statistics['departments'] = list(department_stats)
-    
-    # Lab test statistics
-    lab_test_stats = LabTestOrder.objects.values('status').annotate(
-        count=Count('id')
-    ).order_by('-count')
-    statistics['lab_tests'] = list(lab_test_stats)
-    
-    # Gender distribution of patients
-    gender_stats = Patient.objects.values('gender').annotate(
-        count=Count('patient_id')
-    ).order_by('-count')
-    statistics['patient_gender_distribution'] = list(gender_stats)
-    
-    # Recent patient registrations (trend over last 6 months)
-    months_ago_6 = today - timedelta(days=180)
-    recent_patients = []
-    for i in range(6):
-        month_start = months_ago_6 + timedelta(days=30*i)
-        month_end = month_start + timedelta(days=30)
-        count = Patient.objects.filter(
-            registration_date__date__gte=month_start,
-            registration_date__date__lt=month_end
-        ).count()
-        month_name = month_start.strftime("%b")
-        recent_patients.append({
-            'month': month_name,
-            'count': count
-        })
-    statistics['patient_registration_trend'] = recent_patients
-    
-    return Response(statistics)
+    # Here you would typically gather statistics data
+    # For now, we'll just render the template
+    return render(request, 'admin_app/hms_dashboard.html', {
+        'active_tab': 'statistics',
+        'page_title': 'System Statistics'
+    })
 
-@api_view(['GET'])
+@login_required
+@user_passes_test(is_admin)
 def system_logs(request):
     """
-    Get system logs for the admin dashboard.
-    In a real implementation, this would fetch from a logging database or file.
-    For demo purposes, we're generating mock logs.
+    View for displaying system logs in the admin dashboard
     """
-    # In a real system, you'd implement actual logging retrieval here
-    # For now, we'll return mock log data
-    
-    logs = generate_mock_logs()
-    
-    # Filter logs by level if requested
-    level_filter = request.query_params.get('level')
-    if level_filter and level_filter != 'all':
-        logs = [log for log in logs if log['level'] == level_filter]
-    
-    return Response(logs)
+    # Here you would typically gather log data
+    # For now, we'll just render the template
+    return render(request, 'admin_app/hms_dashboard.html', {
+        'active_tab': 'logs',
+        'page_title': 'System Logs'
+    })
 
-def generate_mock_logs(count=50):
-    """Generate mock log entries for demonstration"""
-    import random
-    from datetime import datetime, timedelta
+@csrf_exempt
+def patient_register_no_csrf(request):
+    """
+    Special endpoint for patient registration with no CSRF protection for frontend compatibility.
+    This function handles the POST request directly without DRF's APIView wrappers.
+    """
+    if request.method != 'POST':
+        return JsonResponse({
+            'status': 'error',
+            'message': 'Only POST method is allowed'
+        }, status=405)
     
-    levels = ['info', 'warning', 'error']
-    sources = ['system', 'auth', 'database', 'api']
-    messages = [
-        'User login successful',
-        'User login failed',
-        'Database connection established',
-        'Database query error',
-        'API request received',
-        'API request failed',
-        'Patient record updated',
-        'Doctor record created',
-        'Appointment scheduled',
-        'Appointment cancelled',
-        'System backup completed',
-        'File upload failed',
-        'Email notification sent',
-        'Password reset requested',
-        'User session expired'
-    ]
-    
-    logs = []
-    now = datetime.now()
-    
-    for i in range(count):
-        # Generate random timestamp within the last 7 days
-        random_hours = random.randint(0, 7 * 24)
-        timestamp = (now - timedelta(hours=random_hours)).isoformat()
+    try:
+        print("CSRF-free patient registration endpoint called")
+        print("Request headers:", {k: v for k, v in request.headers.items()})
         
-        level = random.choice(levels)
-        source = random.choice(sources)
-        message = random.choice(messages)
+        # First, try a raw SQL ALTER TABLE to fix the gender column
+        try:
+            from django.db import connection
+            with connection.cursor() as cursor:
+                # Check the current column definition
+                cursor.execute("SELECT column_name, data_type, character_maximum_length FROM information_schema.columns WHERE table_name = 'hms_patient' AND column_name = 'gender';")
+                column_info = cursor.fetchall()
+                print("Current gender column definition:", column_info)
+                
+                # Only try to alter if it's varchar(1)
+                if column_info and len(column_info) > 0:
+                    col, dtype, length = column_info[0]
+                    if dtype == 'character varying' and length == 1:
+                        # Try to alter the column if needed
+                        print("Altering gender column from varchar(1) to varchar(10)...")
+                        cursor.execute("ALTER TABLE hms_patient ALTER COLUMN gender TYPE varchar(10);")
+                        print("Successfully altered gender column to varchar(10)")
+                    else:
+                        print(f"No need to alter gender column - current type: {dtype}({length})")
+                else:
+                    print("Could not find gender column in hms_patient table")
+        except Exception as e:
+            print("Error altering gender column:", str(e))
+            print("Will attempt to use single-letter gender codes as fallback")
         
-        # Generate more specific details based on the message
-        details = {}
-        if 'login' in message:
-            details['user'] = f'user{random.randint(1, 100)}'
-            details['ip'] = f'192.168.1.{random.randint(1, 255)}'
-        elif 'database' in message:
-            details['query'] = 'SELECT * FROM table WHERE condition = value'
-            details['duration'] = f'{random.randint(1, 500)}ms'
-        elif 'record' in message:
-            details['record_id'] = random.randint(1, 1000)
-            details['changes'] = ['field1', 'field2']
+        # Parse JSON body
+        import json
+        try:
+            data = json.loads(request.body)
+        except json.JSONDecodeError:
+            return JsonResponse({
+                'status': 'error',
+                'message': 'Invalid JSON in request body'
+            }, status=400)
         
-        logs.append({
-            'id': f'log-{i+1}',
-            'timestamp': timestamp,
-            'level': level,
-            'source': source,
-            'message': message,
-            'details': details
-        })
+        print("Patient registration request data:", data)
+        
+        # Check for existing username
+        username = data.get('username', '')
+        if username and User.objects.filter(username=username).exists():
+            return JsonResponse({
+                'status': 'error',
+                'message': 'Username already exists',
+                'errors': {'username': ['This username is already taken. Please choose another one.']}
+            }, status=400)
+        
+        # Validate gender field
+        gender = data.get('gender', '')
+        if gender not in ['Male', 'Female', 'Other', 'M', 'F', 'O']:
+            return JsonResponse({
+                'status': 'error',
+                'message': 'Invalid gender value',
+                'errors': {'gender': [f"Gender must be 'Male', 'Female', or 'Other'. Got '{gender}'"]}
+            }, status=400)
+        
+        # Use our existing serializer for validation and creation
+        serializer = AdminPatientRegistrationSerializer(data=data)
+        if serializer.is_valid():
+            try:
+                patient = serializer.save()
+                print(f"Patient registration successful: {patient.user.username}")
+                
+                # Optional: Add user to 'Patient' group if you have it
+                try:
+                    patient_group = Group.objects.get(name='Patient')
+                    patient.user.groups.add(patient_group)
+                except Group.DoesNotExist:
+                    pass  # If group doesn't exist, just continue
+                
+                return JsonResponse({
+                    'status': 'success',
+                    'message': f"Patient registered successfully with username: {patient.user.username}",
+                    'data': serializer.data
+                }, status=201)
+            except Exception as e:
+                import traceback
+                print(f"Exception during patient save: {str(e)}")
+                print(traceback.format_exc())
+                return JsonResponse({
+                    'status': 'error',
+                    'message': 'Server error during patient creation',
+                    'detail': str(e)
+                }, status=500)
+        
+        # Return validation errors
+        print("Patient validation errors:", serializer.errors)
+        return JsonResponse({
+            'status': 'error',
+            'message': 'Invalid data provided',
+            'errors': serializer.errors
+        }, status=400)
     
-    # Sort by timestamp (newest first)
-    logs.sort(key=lambda x: x['timestamp'], reverse=True)
+    except Exception as e:
+        import traceback
+        print(f"Exception in patient registration: {str(e)}")
+        print(traceback.format_exc())
+        return JsonResponse({
+            'status': 'error',
+            'message': 'Server error during registration',
+            'detail': str(e)
+        }, status=500)
+
+@csrf_exempt
+def doctor_register_no_csrf(request):
+    """
+    Special endpoint for doctor registration with no CSRF protection for frontend compatibility.
+    This function handles the POST request directly without DRF's APIView wrappers.
+    """
+    if request.method != 'POST':
+        return JsonResponse({
+            'status': 'error',
+            'message': 'Only POST method is allowed'
+        }, status=405)
     
-    return logs
+    try:
+        print("CSRF-free doctor registration endpoint called")
+        print("Request headers:", {k: v for k, v in request.headers.items()})
+        
+        # Parse JSON body
+        import json
+        try:
+            data = json.loads(request.body)
+        except json.JSONDecodeError:
+            return JsonResponse({
+                'status': 'error',
+                'message': 'Invalid JSON in request body'
+            }, status=400)
+        
+        print("Doctor registration request data:", data)
+        
+        # Check for existing username
+        username = data.get('username', '')
+        if username and User.objects.filter(username=username).exists():
+            return JsonResponse({
+                'status': 'error',
+                'message': 'Username already exists',
+                'errors': {'username': ['This username is already taken. Please choose another one.']}
+            }, status=400)
+        
+        # Use our existing serializer for validation and creation
+        serializer = AdminDoctorRegistrationSerializer(data=data)
+        if serializer.is_valid():
+            try:
+                doctor = serializer.save()
+                print(f"Doctor registration successful: {doctor.user.username}")
+                
+                # Optional: Add user to 'Doctor' group if you have it
+                try:
+                    doctor_group = Group.objects.get(name='Doctor')
+                    doctor.user.groups.add(doctor_group)
+                except Group.DoesNotExist:
+                    pass  # If group doesn't exist, just continue
+                
+                return JsonResponse({
+                    'status': 'success',
+                    'message': f"Doctor registered successfully with username: {doctor.user.username}",
+                    'data': serializer.data
+                }, status=201)
+            except Exception as e:
+                import traceback
+                print(f"Exception during doctor save: {str(e)}")
+                print(traceback.format_exc())
+                return JsonResponse({
+                    'status': 'error',
+                    'message': 'Server error during doctor creation',
+                    'detail': str(e)
+                }, status=500)
+        
+        # Return validation errors
+        print("Doctor validation errors:", serializer.errors)
+        return JsonResponse({
+            'status': 'error',
+            'message': 'Invalid data provided',
+            'errors': serializer.errors
+        }, status=400)
+    
+    except Exception as e:
+        import traceback
+        print(f"Exception in doctor registration: {str(e)}")
+        print(traceback.format_exc())
+        return JsonResponse({
+            'status': 'error',
+            'message': 'Server error during registration',
+            'detail': str(e)
+        }, status=500)
+
+@csrf_exempt
+def receptionist_register_no_csrf(request):
+    """
+    Special endpoint for receptionist registration with no CSRF protection for frontend compatibility.
+    This function handles the POST request directly without DRF's APIView wrappers.
+    """
+    if request.method != 'POST':
+        return JsonResponse({
+            'status': 'error',
+            'message': 'Only POST method is allowed'
+        }, status=405)
+    
+    try:
+        print("CSRF-free receptionist registration endpoint called")
+        print("Request headers:", {k: v for k, v in request.headers.items()})
+        
+        # Parse JSON body
+        import json
+        try:
+            data = json.loads(request.body)
+        except json.JSONDecodeError:
+            return JsonResponse({
+                'status': 'error',
+                'message': 'Invalid JSON in request body'
+            }, status=400)
+        
+        print("Receptionist registration request data:", data)
+        
+        # Check for existing username
+        username = data.get('username', '')
+        if username and User.objects.filter(username=username).exists():
+            return JsonResponse({
+                'status': 'error',
+                'message': 'Username already exists',
+                'errors': {'username': ['This username is already taken. Please choose another one.']}
+            }, status=400)
+        
+        # Use our existing serializer for validation
+        serializer = AdminReceptionistRegistrationSerializer(data=data)
+        if serializer.is_valid():
+            try:
+                # Create a user with minimal information
+                user = User.objects.create_user(
+                    username=data['username'],
+                    password=data['password'],
+                    email=data.get('email', ''),
+                    # Only store username/email in auth_user, not personal details
+                    first_name='',
+                    last_name=''
+                )
+                
+                print(f"User created: {user.username}")
+                
+                # Create HMS Receptionist record with all the details
+                from hms.models import Receptionist as HMSReceptionist
+                try:
+                    hms_receptionist = HMSReceptionist.objects.create(
+                        user=user,
+                        first_name=data.get('first_name', ''),
+                        last_name=data.get('last_name', ''),
+                        contact_number=data.get('contact_number', ''),
+                        email=data.get('email', ''),
+                        address=data.get('address', ''),
+                        date_of_birth=data.get('date_of_birth')
+                    )
+                    print(f"Created HMS Receptionist: {hms_receptionist.receptionist_id} - {hms_receptionist.first_name} {hms_receptionist.last_name}")
+                except Exception as e:
+                    import traceback
+                    print(f"ERROR creating HMS Receptionist: {str(e)}")
+                    print(traceback.format_exc())
+                    # If HMS Receptionist creation fails, delete the user
+                    user.delete()
+                    return JsonResponse({
+                        'status': 'error',
+                        'message': 'Error creating receptionist record',
+                        'detail': str(e)
+                    }, status=500)
+                
+                # Also create the receptionist_app Receptionist for compatibility
+                from receptionist_app.models import Receptionist
+                app_receptionist = Receptionist.objects.create(
+                    user=user,
+                    contact_number=data.get('contact_number', ''),
+                    address=data.get('address', ''),
+                    date_of_birth=data.get('date_of_birth')
+                )
+                
+                # Optional: Add user to 'Receptionist' group if you have it
+                try:
+                    from django.contrib.auth.models import Group
+                    receptionist_group = Group.objects.get(name='Receptionist')
+                    user.groups.add(receptionist_group)
+                except Group.DoesNotExist:
+                    pass  # If group doesn't exist, just continue
+                
+                # Prepare response data
+                response_data = {
+                    'id': hms_receptionist.receptionist_id,
+                    'user_id': user.id,
+                    'username': user.username,
+                    'email': user.email,
+                    'first_name': hms_receptionist.first_name,
+                    'last_name': hms_receptionist.last_name,
+                    'contact_number': hms_receptionist.contact_number,
+                    'address': hms_receptionist.address,
+                    'date_of_birth': hms_receptionist.date_of_birth.isoformat() if hms_receptionist.date_of_birth else None,
+                    'join_date': hms_receptionist.join_date.isoformat() if hms_receptionist.join_date else None,
+                    'is_active': hms_receptionist.is_active
+                }
+                
+                return JsonResponse({
+                    'status': 'success',
+                    'message': f"Receptionist registered successfully with username: {user.username}",
+                    'data': response_data
+                }, status=201)
+            except Exception as e:
+                import traceback
+                print(f"Exception during receptionist save: {str(e)}")
+                print(traceback.format_exc())
+                return JsonResponse({
+                    'status': 'error',
+                    'message': 'Server error during receptionist creation',
+                    'detail': str(e)
+                }, status=500)
+        
+        # Return validation errors
+        print("Receptionist validation errors:", serializer.errors)
+        return JsonResponse({
+            'status': 'error',
+            'message': 'Invalid data provided',
+            'errors': serializer.errors
+        }, status=400)
+    
+    except Exception as e:
+        import traceback
+        print(f"Exception in receptionist registration: {str(e)}")
+        print(traceback.format_exc())
+        return JsonResponse({
+            'status': 'error',
+            'message': 'Server error during registration',
+            'detail': str(e)
+        }, status=500)

@@ -4,15 +4,21 @@ from django.core.exceptions import ValidationError
 from django.contrib.auth.models import User
 
 class Patient(models.Model):
+    GENDER_CHOICES = [
+        ('Male', 'Male'),
+        ('Female', 'Female'),
+        ('Other', 'Other'),
+    ]
+    
     patient_id = models.AutoField(primary_key=True)
     reg_num = models.CharField(max_length=20, unique=True, verbose_name="Registration Number")
     first_name = models.CharField(max_length=100, verbose_name="First Name")
     last_name = models.CharField(max_length=100, verbose_name="Last Name")
-    gender = models.CharField(max_length=10, choices=[
-        ('Male', 'Male'),
-        ('Female', 'Female'),
-        ('Other', 'Other'),
-    ], verbose_name="Gender")
+    gender = models.CharField(
+        max_length=10, 
+        choices=GENDER_CHOICES,
+        verbose_name="Gender"
+    )
     date_of_birth = models.DateField(verbose_name="Date of Birth")
     contact_number = models.CharField(max_length=20, blank=True, null=True, verbose_name="Contact Number")
     email = models.EmailField(verbose_name="Email", blank=True, null=True) # Keep EmailField for validation, but make it optional for now
@@ -122,3 +128,22 @@ class LabTestOrder(models.Model):
 
     def __str__(self):
         return f"{self.test_name} for {self.patient} ({self.status})"
+
+class Receptionist(models.Model):
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='hms_receptionist', null=True, blank=True)
+    receptionist_id = models.AutoField(primary_key=True)
+    first_name = models.CharField(max_length=100, verbose_name="First Name")
+    last_name = models.CharField(max_length=100, verbose_name="Last Name")
+    contact_number = models.CharField(max_length=20, blank=True, null=True, verbose_name="Contact Number")
+    email = models.EmailField(blank=True, null=True, verbose_name="Email")
+    address = models.TextField(blank=True, null=True, verbose_name="Address")
+    date_of_birth = models.DateField(blank=True, null=True, verbose_name="Date of Birth")
+    join_date = models.DateField(auto_now_add=True, verbose_name="Join Date")
+    is_active = models.BooleanField(default=True, verbose_name="Is Active")
+
+    def __str__(self):
+        return f"Receptionist: {self.first_name} {self.last_name}"
+
+    class Meta:
+        verbose_name = "Receptionist"
+        verbose_name_plural = "Receptionists"
